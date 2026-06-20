@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Family Room Messenger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Smooth Scroll behavior inside our active chat stream container */
+        #messageArea::-webkit-scrollbar { width: 6px; }
+        #messageArea::-webkit-scrollbar-track { background: transparent; }
+        #messageArea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased h-screen flex flex-col">
+
+<header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm">
+    <div class="flex items-center gap-3">
+        <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-md shadow-blue-200">
+            <i class="fa-solid fa-vault text-xl"></i>
+        </div>
+        <div>
+            <h1 class="font-bold text-lg leading-tight tracking-tight">Family Room Messenger</h1>
+            <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> LAN Active
+            </p>
+        </div>
+    </div>
+    <div id="statusBadge" class="text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-full flex items-center gap-2">
+        <i class="fa-solid fa-circle-nodes"></i> Offline Mode
+    </div>
+</header>
+
+<main class="flex-grow flex overflow-hidden max-w-7xl w-full mx-auto sm:p-4 md:p-6 gap-4">
+
+    <section id="loginPane" class="w-full sm:w-80 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-sm shrink-0">
+        <div>
+            <h3 class="font-bold text-slate-900 text-base mb-1">User Identity</h3>
+            <p class="text-xs text-slate-400 mb-6">Choose an identity alias to route chat updates and files across your hotspot.</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 tracking-wider mb-2">Username Handle</label>
+                    <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                <i class="fa-solid fa-user text-sm"></i>
+                            </span>
+                        <input type="text" id="username" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm transition-all font-medium" placeholder="Enter your name..." />
+                    </div>
+                </div>
+                <button onclick="connect()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Authenticate & Join
+                </button>
+            </div>
+        </div>
+        <div class="hidden sm:block pt-6 border-t border-slate-100">
+            <div class="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                <i class="fa-solid fa-microchip text-sm"></i> Version : v1.0
+            </div>
+        </div>
+    </section>
+
+    <section class="flex-grow bg-white border border-slate-200 rounded-2xl flex flex-col overflow-hidden shadow-sm">
+
+        <ul id="messageArea" class="flex-grow p-6 overflow-y-auto bg-slate-50/50 space-y-4 flex flex-col">
+            <li th:each="msg : ${history}" th:class="${'flex flex-col max-w-[85%] rounded-2xl p-4 shadow-sm ' + (msg.content != null ? 'bg-white border border-slate-100 align-self-start' : 'bg-white')}">
+                <div class="flex items-baseline gap-2 mb-1">
+                    <span class="font-bold text-sm text-slate-800" th:text="${msg.sender}"></span>
+                </div>
+                <p class="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed" th:if="${msg.content != null}" th:text="${msg.content}"></p>
+                <div th:if="${msg.fileData != null}" class="mt-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-2.5 overflow-hidden">
+                        <div class="bg-blue-50 text-blue-600 p-2.5 rounded-lg shrink-0">
+                            <i class="fa-solid fa-file-invoice text-lg"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-semibold text-slate-700 truncate" th:text="${msg.fileName}"></p>
+                            <p class="text-[10px] text-slate-400">Vault Encoded Payload</p>
+                        </div>
+                    </div>
+                    <a class="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 shrink-0 shadow-sm" th:href="${msg.fileData}" th:download="${msg.fileName}">
+                        <i class="fa-solid fa-download"></i> Get File
+                    </a>
+                </div>
+            </li>
+        </ul>
+
+        <footer class="p-4 bg-white border-t border-slate-100 shrink-0">
+            <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2 focus-within:border-blue-500 focus-within:bg-white transition-all">
+
+                <label class="cursor-pointer p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all shrink-0 relative" title="Attach LAN asset data packet">
+                    <i class="fa-solid fa-paperclip text-lg"></i>
+                    <input type="file" id="fileInput" class="hidden" disabled onchange="handleFileSelectLabel()"/>
+                    <span id="fileIndicator" class="absolute top-1 right-1 h-2 w-2 bg-blue-500 rounded-full hidden"></span>
+                </label>
+
+                <input type="text" id="message" placeholder="Type a secure network transmission message..." autocomplete="off" class="flex-grow bg-transparent border-none text-sm focus:outline-none py-2 px-1 font-medium placeholder-slate-400" disabled onkeypress="if(event.key === 'Enter') sendMessage()"/>
+
+                <button id="sendBtn" onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition-all shadow-md shadow-blue-100 disabled:opacity-40 disabled:shadow-none shrink-0" disabled>
+                    <i class="fa-solid fa-paper-plane text-sm"></i>
+                </button>
+            </div>
+            <p id="fileNamePreview" class="text-xs text-blue-600 font-medium px-2 mt-2 hidden flex items-center gap-1.5">
+                <i class="fa-solid fa-file-signature"></i> Ready to send file payload...
+            </p>
+        </footer>
+    </section>
+</main>
+
+<script th:inline="javascript">
+    let stompClient = null;
+
+    function connect() {
+        const username = document.getElementById('username').value.trim();
+        if(username) {
+            const socket = new SockJS('/ws-chat');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                // Update connection layout tags state indicators
+                const badge = document.getElementById('statusBadge');
+                badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Connected Stream';
+                badge.classList.remove('bg-amber-50', 'text-amber-700', 'border-amber-200');
+                badge.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+
+                // Unlock input layout operations elements
+                document.getElementById('message').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('fileInput').disabled = false;
+                document.getElementById('username').disabled = true;
+
+                // Transition visibility maps on compact phone viewports devices
+                if (window.innerWidth < 640) {
+                    document.getElementById('loginPane').classList.add('hidden');
+                }
+
+                // Subscribe to the shared message stream topic
+                stompClient.subscribe('/topic/public', function (sdkEvent) {
+                    onMessageReceived(sdkEvent);
+                });
+            });
+        }
+    }
+
+    function handleFileSelectLabel() {
+        const input = document.getElementById('fileInput');
+        const preview = document.getElementById('fileNamePreview');
+        const dot = document.getElementById('fileIndicator');
+
+        if (input.files.length > 0) {
+            preview.innerHTML = `<i class="fa-solid fa-file-signature"></i> Staged: <span class="font-bold">${input.files[0].name}</span>`;
+            preview.classList.remove('hidden');
+            dot.classList.remove('hidden');
+        } else {
+            preview.classList.add('hidden');
+            dot.classList.add('hidden');
+        }
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('message');
+        const usernameInput = document.getElementById('username');
+        const fileInput = document.getElementById('fileInput');
+
+        if (stompClient) {
+            const chatMessage = {
+                sender: usernameInput.value,
+                content: messageInput.value,
+                fileData: null,
+                fileName: null
+            };
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    chatMessage.fileData = e.target.result;
+                    chatMessage.fileName = file.name;
+
+                    stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+
+                    // ✅ CLEAN FIXED PATHWAY: Correctly reset visibility states using classList
+                    fileInput.value = '';
+                    document.getElementById('fileNamePreview').classList.add('hidden');
+                    document.getElementById('fileIndicator').classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else if (messageInput.value.trim() !== "") {
+                stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+            }
+            messageInput.value = '';
+        }
+    }
+
+    function onMessageReceived(payload) {
+        const message = JSON.parse(payload.body);
+        const messageArea = document.getElementById('messageArea');
+        const currentUsername = document.getElementById('username').value.trim();
+        const messageElement = document.createElement('li');
+
+        const isMe = (message.sender === currentUsername);
+
+        // ✅ CLEAN FIXED PATHWAY: Replaced combined assignment with safe sequential manipulation
+        messageElement.className = "flex flex-col max-w-[85%] rounded-2xl p-4 shadow-sm transition-all";
+        if (isMe) {
+            messageElement.classList.add('bg-blue-600', 'text-white', 'self-end', 'rounded-tr-none');
+        } else {
+            messageElement.classList.add('bg-white', 'border', 'border-slate-100', 'self-start', 'rounded-tl-none');
+        }
+
+        let contentHtml = `<div class="flex items-baseline gap-2 mb-1">
+        <span class="font-bold text-xs ${isMe ? 'text-blue-100' : 'text-slate-800'}">${message.sender}</span>
+    </div>`;
+
+        if (message.content) {
+            contentHtml += `<p class="text-sm ${isMe ? 'text-white' : 'text-slate-600'} whitespace-pre-wrap leading-relaxed">${message.content}</p>`;
+        }
+
+        // Locate this block inside onMessageReceived() and replace it:
+        if (message.fileData) {
+            let mediaPreviewHtml = '';
+
+            // Check what kind of file it is by looking at the Base64 header prefix
+            if (message.fileData.startsWith('data:image/')) {
+                // Render as a live previewable image card
+                mediaPreviewHtml = `<img src="${message.fileData}" class="mt-2 rounded-xl max-w-full h-auto max-h-60 object-cover border border-slate-200/50" />`;
+            } else if (message.fileData.startsWith('data:video/')) {
+                // Render as an interactive playable video box
+                mediaPreviewHtml = `<video src="${message.fileData}" controls class="mt-2 rounded-xl max-w-full max-h-60 border border-slate-200/50"></video>`;
+            } else {
+                // Fallback for standard files, documents, or PDFs
+                mediaPreviewHtml = `<div class="p-2.5 rounded-lg shrink-0 ${isMe ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600'}">
+            <i class="fa-solid fa-file-invoice text-lg"></i>
+        </div>`;
+            }
+
+            contentHtml += `<div class="mt-2.5 p-3 rounded-xl flex flex-col gap-2 ${isMe ? 'bg-blue-700/50 border border-blue-500/30' : 'bg-slate-50 border border-slate-100'}">
+        <div class="flex items-center justify-between gap-4 overflow-hidden">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+                ${mediaPreviewHtml}
+                <div class="overflow-hidden">
+                    <p class="text-xs font-semibold truncate ${isMe ? 'text-white' : 'text-slate-700'}">${message.fileName}</p>
+                    <p class="text-[10px] ${isMe ? 'text-blue-200' : 'text-slate-400'}">LAN Shared Core Asset</p>
+                </div>
+            </div>
+            <a class="text-xs px-3 py-1.5 rounded-lg transition-all font-semibold flex items-center gap-1.5 shrink-0 shadow-sm ${isMe ? 'bg-white text-blue-600 hover:bg-slate-100' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}" href="${message.fileData}" download="${message.fileName}">
+                <i class="fa-solid fa-download"></i> Download
+            </a>
+        </div>
+    </div>`;
+        }
+
+        messageElement.innerHTML = contentHtml;
+        messageArea.appendChild(messageElement);
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
+
+    // Auto-scroll logic to handle initial Thymeleaf history hydration loading
+    window.onload = function() {
+        const area = document.getElementById('messageArea');
+        area.scrollTop = area.scrollHeight;
+    }
+</script>
+</body>
+</html>
