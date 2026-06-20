@@ -1,5 +1,6 @@
 package org.chat.chatsystem.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -12,6 +13,15 @@ import org.springframework.web.socket.config.annotation.WebSocketTransportRegist
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    @Value("${message.size.limit}")
+    private int messageSizeLimit;
+
+    @Value("${buffer.size.limit}")
+    private int bufferSizeLimit;
+
+    @Value("${time.limit}")
+    private int timeLimit;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry){
         registry.enableSimpleBroker("/topic");
@@ -23,14 +33,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws-chat").setAllowedOriginPatterns("*").withSockJS();
     }
 
-    // ✅ ADD THIS CONFIGURATION TO INCREASE LIMITS:
     @Override
     public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
         // Set maximum text message buffer size to 50MB (50 * 1024 * 1024)
-        registration.setMessageSizeLimit(52428800);
+        registration.setMessageSizeLimit(this.messageSizeLimit);
         // Set send buffer size limit to 50MB
-        registration.setSendBufferSizeLimit(52428800);
+        registration.setSendBufferSizeLimit(this.bufferSizeLimit);
         // Set maximum time to send a message frame (optional but recommended for big files)
-        registration.setSendTimeLimit(20000);
+        registration.setSendTimeLimit(this.timeLimit);
     }
 }
