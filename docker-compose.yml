@@ -1,0 +1,42 @@
+services:
+  # --- Service A: The Persistent Storage Hub ---
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: chat-db
+    environment:
+      POSTGRES_DB: chat_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_chat_data:/var/lib/postgresql/data
+    networks:
+      - chat-mesh-network
+    restart: unless-stopped
+
+  # --- Service B: The Java Spring Boot Backend Engine ---
+  chat-app:
+    build: .
+    container_name: chat-backend-app
+    ports:
+      - "8080:8080"
+    environment:
+      # We target "postgres-db" (the service name) instead of localhost
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/chat_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=password
+    # Guarantees the application container doesn't spin up until the database port is healthy
+    depends_on:
+      postgres-db:
+        condition: service_started
+    networks:
+      - chat-mesh-network
+    restart: always
+
+volumes:
+  postgres_chat_data:
+
+networks:
+  chat-mesh-network:
+    driver: bridge
